@@ -1,0 +1,5 @@
+include ':car-media-common'
+include ':car-apps-common'
+include ':car-arch-common'
+include ':app'
+rootProject.name = "CarMedia"
