@@ -1,3 +1,4 @@
+include ':car-media-service'
 include ':car-media-common'
 include ':car-apps-common'
 include ':car-arch-common'

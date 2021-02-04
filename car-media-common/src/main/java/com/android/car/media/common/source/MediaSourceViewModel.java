@@ -22,8 +22,13 @@ import android.car.CarNotConnectedException;
 import android.car.media.CarMediaManager;
 import android.content.ComponentName;
 import android.content.ContentValues;
+import android.content.Context;
+import android.content.Intent;
+import android.content.ServiceConnection;
 import android.media.session.MediaController;
 import android.os.Handler;
+import android.os.IBinder;
+import android.os.RemoteException;
 import android.support.v4.media.MediaBrowserCompat;
 import android.support.v4.media.session.MediaControllerCompat;
 import android.support.v4.media.session.MediaSessionCompat;
@@ -37,6 +42,9 @@ import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MutableLiveData;
 
 import com.android.car.media.common.MediaConstants;
+import com.faw.car.media.service.CarMediaService;
+import com.faw.car.media.service.ICarMediaManager;
+import com.faw.car.media.service.ICarMediaSourceListener;
 
 import java.util.Objects;
 
@@ -47,12 +55,13 @@ import static com.android.car.arch.common.LiveDataFunctions.dataOf;
  * Contains observable data needed for displaying playback and browse UI.
  * MediaSourceViewModel is a singleton tied to the application to provide a single source of truth.
  */
-public class MediaSourceViewModel extends AndroidViewModel {
+public class MediaSourceViewModel extends AndroidViewModel implements ICarMediaSourceListener {
     private static final String TAG = "MediaSourceViewModel";
 
     private static MediaSourceViewModel sInstance;
-    private final Car mCar;
-    private CarMediaManager mCarMediaManager;
+//    private final Car mCar;
+//    private CarMediaManager mCarMediaManager;
+    private ICarMediaManager mICarMediaManager;
 
     // Primary media source.
     private final MutableLiveData<MediaSource> mPrimaryMediaSource = dataOf(null);
@@ -62,7 +71,19 @@ public class MediaSourceViewModel extends AndroidViewModel {
     private final MutableLiveData<MediaControllerCompat> mMediaController = dataOf(null);
 
     private final Handler mHandler;
-    private final CarMediaManager.MediaSourceChangedListener mMediaSourceListener;
+//    private final CarMediaManager.MediaSourceChangedListener mMediaSourceListener;
+
+    private ICarMediaSourceListener mIMediaSourceListener;
+
+    @Override
+    public void onMediaSourceChanged(String newSource) throws RemoteException {
+
+    }
+
+    @Override
+    public IBinder asBinder() {
+        return null;
+    }
 
     /**
      * Factory for creating dependencies. Can be swapped out for testing.
@@ -70,7 +91,7 @@ public class MediaSourceViewModel extends AndroidViewModel {
     @VisibleForTesting
     interface InputFactory {
         MediaBrowserConnector createMediaBrowserConnector(@NonNull Application application,
-                @NonNull MediaBrowserConnector.Callback connectedBrowserCallback);
+                                                          @NonNull MediaBrowserConnector.Callback connectedBrowserCallback);
 
         MediaControllerCompat getControllerForSession(@Nullable MediaSessionCompat.Token session);
 
@@ -81,7 +102,9 @@ public class MediaSourceViewModel extends AndroidViewModel {
         MediaSource getMediaSource(String packageName);
     }
 
-    /** Returns the MediaSourceViewModel singleton tied to the application. */
+    /**
+     * Returns the MediaSourceViewModel singleton tied to the application.
+     */
     public static MediaSourceViewModel get(@NonNull Application application) {
         if (sInstance == null) {
             sInstance = new MediaSourceViewModel(application);
@@ -135,9 +158,11 @@ public class MediaSourceViewModel extends AndroidViewModel {
     @VisibleForTesting
     MediaSourceViewModel(@NonNull Application application, @NonNull InputFactory inputFactory) {
         super(application);
+        Intent intent = new Intent(application.getApplicationContext(), CarMediaService.class);
+        application.getApplicationContext().bindService(intent, mConnection, Context.BIND_AUTO_CREATE);
 
         mInputFactory = inputFactory;
-        mCar = inputFactory.getCarApi();
+//        mCar = inputFactory.getCarApi();
 
         mConnectedBrowserCallback = browser -> {
             mConnectedMediaBrowser.setValue(browser);
@@ -158,14 +183,20 @@ public class MediaSourceViewModel extends AndroidViewModel {
                 mConnectedBrowserCallback);
 
         mHandler = new Handler(application.getMainLooper());
-        mMediaSourceListener = packageName -> mHandler.post(
-                () -> updateModelState(mInputFactory.getMediaSource(packageName)));
+//        mMediaSourceListener = packageName -> mHandler.post(
+//                () -> updateModelState(mInputFactory.getMediaSource(packageName)));
+        mIMediaSourceListener = new ICarMediaSourceListener.Stub() {
+            @Override
+            public void onMediaSourceChanged(String newSource) throws RemoteException {
+                mHandler.post(() -> updateModelState(mInputFactory.getMediaSource(newSource)));
+            }
+        };
 
         try {
-            mCarMediaManager = mInputFactory.getCarMediaManager(mCar);
+//            mCarMediaManager = mInputFactory.getCarMediaManager(mCar);
 //            mCarMediaManager.registerMediaSourceListener(mMediaSourceListener);
 //            updateModelState(mInputFactory.getMediaSource(mCarMediaManager.getMediaSource()));
-            updateModelState(mInputFactory.getMediaSource(""));
+//            updateModelState(mInputFactory.getMediaSource(""));
         } catch (CarNotConnectedException e) {
             Log.e(TAG, "Car not connected", e);
         }
@@ -189,8 +220,13 @@ public class MediaSourceViewModel extends AndroidViewModel {
     public void setPrimaryMediaSource(MediaSource mediaSource) {
         ContentValues values = new ContentValues();
         values.put(MediaConstants.KEY_PACKAGE_NAME, mediaSource.getPackageName());
-        updateModelState(mInputFactory.getMediaSource(""));
+//        updateModelState(mInputFactory.getMediaSource(""));
 //        mCarMediaManager.setMediaSource(mediaSource.getPackageName());
+        try {
+            mICarMediaManager.setMediaSource(mediaSource.getPackageName());
+        } catch (RemoteException e) {
+            e.printStackTrace();
+        }
     }
 
     /**
@@ -237,4 +273,25 @@ public class MediaSourceViewModel extends AndroidViewModel {
         }
         mBrowserConnector.connectTo(browseService);
     }
+
+    private ServiceConnection mConnection = new ServiceConnection() {
+        public void onServiceConnected(ComponentName className,
+                                       IBinder service) {
+            mICarMediaManager = ICarMediaManager.Stub.asInterface(service);
+            Log.d(TAG, "RemoteService,ServiceConnection,onServiceConnected");
+            try {
+                mICarMediaManager.registerMediaSourceListener(mIMediaSourceListener);
+//                updateModelState(mInputFactory.getMediaSource(mICarMediaManager.getMediaSource()));
+            } catch (RemoteException e) {
+                e.printStackTrace();
+            }
+        }
+
+        public void onServiceDisconnected(ComponentName className) {
+            // This is called when the connection with the service has been
+            // unexpectedly disconnected -- that is, its process ed.
+            Log.d(TAG, "onServiceDisconnected,className=" + className);
+            mICarMediaManager = null;
+        }
+    };
 }
