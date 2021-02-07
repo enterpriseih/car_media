@@ -29,9 +29,9 @@ public class MediaDispatcherActivity extends FragmentActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        if (permissionChk()) {
+//        if (permissionChk()) {
             doOnCreate();
-        }
+//        }
     }
 
     private void doOnCreate() {

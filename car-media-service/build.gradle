@@ -1,5 +1,5 @@
 plugins {
-    id 'com.android.library'
+    id 'com.android.application'
 }
 
 android {
@@ -7,6 +7,7 @@ android {
     buildToolsVersion "30.0.3"
 
     defaultConfig {
+        applicationId "com.faw.car.media.service"
         minSdkVersion 24
         targetSdkVersion 29
         versionCode 1

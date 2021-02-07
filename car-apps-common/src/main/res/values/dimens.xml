@@ -62,7 +62,7 @@
 
     <!-- Default Scroll Bar for PagedRecyclerView -->
     <dimen name="car_scroll_bar_button_size">@*android:dimen/car_touch_target_size</dimen>
-    <dimen name="car_scroll_bar_thumb_width">@*android:dimen/car_seekbar_height</dimen>
+    <dimen name="car_scroll_bar_thumb_width">20dp</dimen>
     <dimen name="car_scroll_bar_separator_margin">@*android:dimen/car_padding_2</dimen>
     <dimen name="car_scroll_bar_margin">@*android:dimen/car_margin</dimen>
     <item name="button_disabled_alpha" format="float" type="dimen">0.2</item>

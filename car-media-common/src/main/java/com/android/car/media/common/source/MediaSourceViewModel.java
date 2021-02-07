@@ -42,7 +42,6 @@ import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MutableLiveData;
 
 import com.android.car.media.common.MediaConstants;
-import com.faw.car.media.service.CarMediaService;
 import com.faw.car.media.service.ICarMediaManager;
 import com.faw.car.media.service.ICarMediaSourceListener;
 
@@ -145,8 +144,8 @@ public class MediaSourceViewModel extends AndroidViewModel implements ICarMediaS
 
             @Override
             public MediaSource getMediaSource(String packageName) {
-//                return packageName == null ? null : new MediaSource(application, packageName);
-                return new MediaSource(application, "com.example.android.uamp");
+                return packageName == null ? null : new MediaSource(application, packageName);
+//                return new MediaSource(application, "com.example.android.uamp");
             }
         });
     }
@@ -158,7 +157,8 @@ public class MediaSourceViewModel extends AndroidViewModel implements ICarMediaS
     @VisibleForTesting
     MediaSourceViewModel(@NonNull Application application, @NonNull InputFactory inputFactory) {
         super(application);
-        Intent intent = new Intent(application.getApplicationContext(), CarMediaService.class);
+        Intent intent = new Intent("com.faw.car.media.service.CarMediaService");
+        intent.setPackage("com.faw.car.media.service");
         application.getApplicationContext().bindService(intent, mConnection, Context.BIND_AUTO_CREATE);
 
         mInputFactory = inputFactory;

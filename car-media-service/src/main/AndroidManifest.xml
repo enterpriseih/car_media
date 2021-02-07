@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="com.faw.car.media.service">
+    package="com.faw.car.media.service"
+    android:sharedUserId="android.uid.system">
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
     <uses-permission android:name="android.permission.MEDIA_CONTENT_CONTROL"/>
     <uses-permission android:name="android.permission.INTERACT_ACROSS_USERS_FULL"/>
@@ -19,6 +20,9 @@
             android:name=".CarMediaService"
             android:enabled="true"
             android:exported="true" >
+            <intent-filter>
+                <action android:name="com.faw.car.media.service.CarMediaService" />
+            </intent-filter>
         </service>
 
         <service android:name=".NotificationListener"
